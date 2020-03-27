@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Simplex solver</title>
+	<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+		integrity="sha256-pasqAKBDmFT4eHoN2ndd6lN370kFiGUFyTiUHWhU7k8=" crossorigin="anonymous"></script>
+	<style>
+		input[type=number] {
+			width: 80px;
+			margin: 5px;
+		}
+
+		input[type=button] {
+			margin: 5px
+		}
+	</style>
+</head>
+
+<body>
+	<script type="text/javascript" src="simplex.js"></script>
+
+	<div>
+		<label for="num_vars">Number of decision variables:</label>
+		<input type="number" id="num_vars">
+	</div>
+	<div>
+		<label for="num_constraints">Number of constraints:</label>
+		<input type="number" id="num_constraints">
+	</div>
+	<div>
+		<input type="button" id="btn_next" value="Next" onclick="onNextClicked()">
+	</div>
+	<div id="maximize_func_div">
+
+	</div>
+	<div id="constraints_div">
+
+	</div>
+	<div id="optimize_btn_div">
+
+	</div>
+	<div id="result_div">
+
+	</div>
+	<script>
+		function onNextClicked() {
+			var num_constraints = parseInt(Number(document.getElementById("num_constraints").value));
+			var num_vars = parseInt(Number(document.getElementById("num_vars").value));
+
+			if (num_constraints < 1 && num_vars < 2) {
+				return;
+			}
+
+			$("div#maximize_func_div").empty();
+			$("div#maximize_func_div").append("Maximize: Z=");
+
+			for (var i = 0; i < num_vars; i++) {
+				textboxText = "x" + (i + 1) + ((i == (num_vars - 1)) ? "" : "+");
+				textboxId = "x" + (i);
+				$("div#maximize_func_div").append("<input type='number' id='" + textboxId + "'>" +
+					textboxText);
+			}
+
+
+			$("div#constraints_div").empty();
+			$("div#constraints_div").append("Constraints:<br>");
+
+			for (var j = 0; j < num_constraints; j++) {
+				for (var i = 0; i < num_vars; i++) {
+					textboxText = "x" + (i + 1) + ((i == (num_vars - 1)) ? "" : "+");
+					textboxId = "c" + (j) + (i);
+					$("div#constraints_div").append("<input type='number' id='" + textboxId + "'>" +
+						textboxText);
+				}
+				$("div#constraints_div").append("<=<input type='number' id='c" + j + (i) + "'>");
+				$("div#constraints_div").append("<br>")
+			}
+
+			for (var i = 0; i < num_vars; i++) {
+				$("div#constraints_div").append("x" + (i + 1) + ((i == num_vars - 1) ? " " : ", "));
+			}
+			$("div#constraints_div").append(">=0");
+
+
+			$("div#optimize_btn_div").empty();
+			$("div#optimize_btn_div").append(
+				"<input type='button' id='btn_optimize' value='Optimize' onclick='onOptimizeClicked()'>");
+		}
+
+		function onOptimizeClicked() {
+			var num_constraints = parseInt(Number(document.getElementById("num_constraints").value));
+			var num_vars = parseInt(Number(document.getElementById("num_vars").value));
+
+			var matrix = [];
+			for (var i = 0; i < num_constraints; i++) {
+				var row = [];
+				row.push(0);
+				for (var j = 0; j < num_vars; j++) {
+					var c_ij = parseInt(Number(document.getElementById("c" + (i) + (j)).value));
+					row.push(c_ij);
+				}
+				for (var k = 0; k < num_constraints; k++) {
+					if (i == k) {
+						row.push(1);
+					} else {
+						row.push(0);
+					}
+				}
+				var c_ij_plus1 = parseInt(Number(document.getElementById("c" + (i) + (j)).value));
+				row.push(c_ij_plus1);
+				matrix.push(row);
+			}
+			var z_row = [];
+			z_row.push(1);
+			for (var i = 0; i < num_vars; i++) {
+				var x_i = parseInt(Number(document.getElementById("x" + i).value));
+				z_row.push(-x_i);
+			}
+			for (var i = num_vars; i < matrix[0].length; i++) {
+				z_row.push(0);
+			}
+			matrix.push(z_row);
+
+			var result = solveSimplex(matrix);
+			$("div#result_div").empty();
+			if (!result['error']) {
+				$("div#result_div").append("Optimum solution:<br>");
+				var basicvars = result['vars'];
+				var optimizedVars = {};
+				for (var i = 0; i < basicvars.length; i++) {
+					if (basicvars[i].includes("x")) {
+						optimizedVars[basicvars[i]] = matrix[i][matrix[0].length - 1];
+					}
+				}
+				var sortedOptimizedVars = {};
+				for (var i = 0; i < num_vars; i++) {
+					if (!optimizedVars.hasOwnProperty("x" + (i + 1))) {
+						sortedOptimizedVars["x" + (i + 1)] = 0;
+					} else {
+						sortedOptimizedVars["x" + (i + 1)] = optimizedVars["x" + (i + 1)];
+					}
+				}
+				for (var key of Object.keys(sortedOptimizedVars)) {
+					$("div#result_div").append(key + " : " + sortedOptimizedVars[key] + "<br>")
+				}
+				$("div#result_div").append("Z : " + matrix[num_constraints + 1 - 1][matrix[0].length - 1]);
+			} else {
+				$("div#result_div").append(result['message']);
+			}
+		}
+	</script>
+</body>
+
+</html>
